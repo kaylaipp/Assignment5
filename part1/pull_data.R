@@ -76,6 +76,11 @@ for (i in 1:N){
   }
 }
 
+NOAA$ATMP[NOAA$ATMP == 999] <- NA
+NOAA$WTMP[NOAA$WTMP == 999] <- NA
+NOAA_2$ATMP[NOAA_2$ATMP == 999] <- NA
+NOAA_2$WTMP[NOAA_2$WTMP == 999] <- NA
+
 # Write to CSV file
 write.csv(NOAA, "data.csv", row.names = FALSE)
 write.csv(NOAA_2, "big_data.csv", row.names = FALSE)
