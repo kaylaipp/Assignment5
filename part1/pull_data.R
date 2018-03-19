@@ -6,13 +6,15 @@ library(lubridate)
 url1 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=46035h"
 url2 <- ".txt.gz&dir=data/historical/stdmet/"
 
-# Data missing for 2013 so use nearby buoy
-url3 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=46070h2013.txt.gz&dir=data/historical/stdmet/"
+# Data missing for 2012 and 2013 so use nearby buoy
+url3 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=46070h2012.txt.gz&dir=data/historical/stdmet/"
+url4 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=46070h2013.txt.gz&dir=data/historical/stdmet/"
 years <- c(1987:2016)
 
 urls <- str_c(url1, years, url2, sep = "")
 filenames <- str_c("noaa", years, sep = "")
-urls[27] <- url3
+urls[26] <- url3
+urls[27] <- url4
 
 N <- length(urls)
 
@@ -53,8 +55,8 @@ for (i in 1:N){
   file <- filter(file, hh == 12)
   
   # make the key to keep data tidy
-  big_file$date = make_datetime(year = big_file$YYYY, month = big_file$MM, day = big_file$DD, hour = big_file$hh)
-  file$date = make_datetime(year = file$YYYY, month = file$MM, day = file$DD, hour = file$hh)
+  big_file$date = ISOdate(year = big_file$YYYY, month = big_file$MM, day = big_file$DD, hour = big_file$hh)
+  file$date = ISOdate(year = file$YYYY, month = file$MM, day = file$DD, hour = file$hh)
   
   # tidy the data 
   file = file %>% select(
@@ -63,6 +65,23 @@ for (i in 1:N){
   big_file = big_file %>% select(
     date, ATMP, WTMP
   )
+  # ensure all dates present
+  cur_year <- year(file$date[3])
+  dates0 <- seq(ISOdate(cur_year, 1, 1), ISOdate(cur_year, 12, 31), by="day")
+  date <- dates0[!(dates0 %in% file$date)]
+  ATMP <- rep(c(NA), times=length(date))
+  WTMP <- rep(c(NA), times=length(date))
+  blank <- data.frame(date, ATMP, WTMP)
+  file <- rbind(file, blank)
+  file <- file[order(file$date),]
+  
+  dates00 <- seq(ISOdate(cur_year, 1, 1), ISOdate(cur_year, 12, 31), by="hour")
+  date <- dates00[!(dates00 %in% big_file$date)]
+  ATMP <- rep(c(NA), times=length(date))
+  WTMP <- rep(c(NA), times=length(date))
+  blank <- data.frame(date, ATMP, WTMP)
+  big_file <- rbind(big_file, blank)
+  big_file <- big_file[order(big_file$date),]
   
   # Create dataframe
   if(i == 1){
