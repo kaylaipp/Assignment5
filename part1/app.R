@@ -184,7 +184,11 @@ server <- function(input, output) {
           For water temperature, we similarly see a value t-value of -194.67, which is
           nearly indisputable evidence. <br> <br>
           However, since our results were already fairly conclusive, this seems
-          unnecessary. Thus we believe our results to still be worth consideration.")
+          unnecessary. Thus we believe our results to still be worth consideration.
+          <br><br>
+          In addition, it's worth nothing that adding more data merely decreases the
+          variance. However, there will always be some variance, so the impact of
+          this is not all that significant.")
   })
   
 }
