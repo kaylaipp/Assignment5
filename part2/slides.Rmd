@@ -1,0 +1,219 @@
+---
+title: "Part2: Toxicity Analysis"
+runtime: shiny
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+options(warn=-1)
+library(shiny)
+library(dplyr)
+require(gridExtra)
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+library(shinydashboard)
+library(DT)
+    
+```
+## Overall Analysis
+- Lethal dose (LD50) is the amount of an ingested substance that kills 50 percent of a test sample
+- The LD50 values in the following slides are the oral toxicity levels for a rat. 
+- The Veg1 dataset shows that restricted use chemicals are often applied to household vegetables such as 
+  cauliflower and broccoli above the standard LD50 rate
+- As portrayed in the following slides, there is a upward trend of larger doses of pesticides being and greater 
+variety of chemicals used in produce as the years go on as seen in the deviating t statistics
+
+## Toxic Chemicals Found
+
+The following is a comprehensive list of toxic (festricted use chemicals) found within broccoli 
+and cauliflower across the US. 
+
+```{r}
+chemicals <- c('BETA-CYFLUTHRIN','BIFENTHRIN','CHLORANTRANILIPROLE','CHLORPYRIFOS','CYFLUTHRIN',
+               'ESFENVALERATE','IMIDACLOPRID','LAMBDA-CYHALOTHRIN','METHOMYL','NALED',
+               'PERMETHRIN','THIAMETHOXAM','ZETA-CYPERMETHRIN',
+               'DIAZINON','DISULFOTON','CYPERMETHRIN','PRONAMIDE','GAMMA-CYHALOTHRIN')
+               
+toxicityLevels <- c(8350,70,5000,270,1271,458,450,79,48,281,4000,1563,
+                    250,400,12.5,250,8350,79)
+toxicity <- data.frame(chemicals,toxicityLevels)
+
+renderDT({
+    toxicity1 <- toxicity %>% slice(1:7) 
+    toxicity1
+  })
+```
+
+## Toxic Chemicals Found
+```{r}
+renderDT({
+    toxicity2 <- toxicity %>% slice(7:14) 
+    toxicity2
+  })
+```
+
+## Toxic Chemicals Found
+```{r}
+renderDT({
+    toxicity3 <- toxicity %>% slice(14:21) 
+    toxicity3
+  })
+```
+
+## Pesticide Yearly Trend
+- The time series in the following slide shows the trend of toxic pesticide use on broccoli and cauliflower
+- In many cases the amount of pesicide being used was within range or greater than the LD50 value that killed 
+50% of rats - therefore harmful to us as well. 
+- Chemicals found that were above standardized LD50 values include: Bifenthrin, Esfenvalerate, Imidaclorpid, Lambda-Cyhalothrin, Methomyl, Naled, 
+Zeta-Cypermethrin and Cypermethrin
+
+## Pesticide Yearly Trend
+```{r eruptions}
+    #only load data once 
+    #read in excel data 
+    veg.1 <- readxl::read_excel("veg1.xlsx")
+    cnames.1 <- colnames(veg.1)
+    c <- apply(veg.1, 2, n_distinct)
+    #c[c>1]
+    
+    d <- names(c[c==1])
+    e <- names(c[c>1])
+    
+    veg.2 <- select(veg.1, e)
+    cnames.2 <- colnames(veg.2)
+    
+    #Veg.2 is filtered table w/o NA values 
+    #apply(veg.2, 2, n_distinct)
+    
+    veg.3 <- dplyr::rename(veg.2, 
+                           Geo = 'Geo Level', 
+                           State = 'State ANSI',
+                           Data = 'Data Item',
+                           Category = 'Domain Category')
+    
+    #Veg.3 is w/ shortend column names
+    cnames.3 <- colnames(veg.3)
+    yy <- separate(veg.3, Category, into = c("label", "quant"), sep=",")
+
+    #ru is table w/ data for only restricted use chemicals 
+    ru <- filter(yy, label=="RESTRICTED USE CHEMICAL")
+    ru2 <- filter(yy, label=="RESTRICTED USE CHEMICAL") 
+
+    ru2 <- ru2%>%mutate(chem = str_extract(quant, "(?<=\\().*?(?= =)"))
+    ru3 <- ru2%>%mutate(chem = str_extract(quant, "(?<=\\().*?(?= =)"))
+    ru4 <- ru2%>%mutate(chem = str_extract(quant, "(?<=\\().*?(?= =)"))
+    #View(ru4)
+    
+    #ru1 is table w/ types of diff restricted chemicals
+    ru1 <- ru %>% select(label, quant) %>% unique()
+    toxicity <- data.frame(chemicals,toxicityLevels)
+    
+inputPanel(
+        title = "Time Series Controls",solidHeader = TRUE,
+        sliderInput("years", "Years:",
+                    min = 2006, max = 2016, value = c(2006,2016),sep = ""),
+
+        selectInput("chemical", "Chemical:",chemicals), 
+        selectInput("veggies1", "Vegetables:",c('BROCCOLI','CAULIFLOWER'))
+)
+
+renderPlot({
+    #filter ru table by year and chemical type 
+    test <- ru%>%filter(Commodity == input$veggies1)
+    newru <- ru%>%filter(between(Year, input$years[1],input$years[2]), str_detect(quant, input$chemical), Commodity == input$veggies1)
+    
+    if(newru$Value == '(D)'){
+    newru$Value[newru$Value == '(D)'] <- 0
+    
+    maxAmount <- toxicity%>%filter(chemicals == input$chemical)
+    Amount <- ts(newru$Value, start = c(input$years[1]), end = input$years[2])
+    plot.ts(Amount)
+    title(main= paste(input$chemical, " IN ", input$veggies1, " - DISSOLVED (D)"))
+    mtext(paste0("Max LD50 value: ", maxAmount$toxicityLevels), side = 3)
+    }
+   
+    else{
+    #add ld50 line 
+    maxAmount <- toxicity%>%filter(chemicals == input$chemical)
+    Amount <- ts(newru$Value, start = c(input$years[1]), end = input$years[2])
+    plot.ts(Amount)
+    title(main=input$chemical)
+    mtext(paste0("Max LD50 value: ", maxAmount$toxicityLevels), side = 3)
+    abline(h=maxAmount$toxicityLevels, col="blue")
+    legend("topright", "Max LD50 value", col=c("blue"), lty=1, cex=.65)
+    }
+    
+  })
+```
+
+## Average Toxicity Levels By Year
+```{r}
+inputPanel(
+        title = "Bar Plot Controls", status = "danger",
+        selectInput("years2", "Year:", c(2006,2010,2014,2016)),
+        selectInput("veggies2", "Vegetable:", c('BROCCOLI', 'CAULIFLOWER'))
+)
+
+renderPlot({
+    newru2 <- ru2%>%filter(Year == input$years2, Commodity == input$veggies2)
+    #replace (D) with 0
+    newru2$Value[newru2$Value == '(D)'] <- 0
+    newru2$Value[newru2$Value == '(Z)'] <- 0
+
+    chems <- newru2$chem
+    vals <- newru2$Value
+    print(chems)
+    df1 = data.frame(chems, vals)
+    
+    test3 <- newru2 %>% 
+      group_by(chem) %>% 
+      summarise(mean_val = mean(as.numeric(Value)))
+    print(test3)
+    par(mar=c(4,11,4,2))
+    barplot(test3$mean_val, names.arg = test3$chem, horiz = T, las = 2, col = "blue", xlab = "Amount (mg/kg)")
+    title(main=paste(input$veggies2, " PESTICIDES IN " , input$years2))
+  })
+```
+
+## T-Test
+- Null Hypothesis: There is an increasing of variety and amount of chemicals applied to produce as years progress
+- Conclusion:There was a significant difference in the paired t statistic and mean when comparing earlier years with more 
+recent years. The results suggest that the null hypothesis is true and there is a trend of greater variety of chemicals with 
+greater amounts. 
+
+## T-Test
+```{r}
+inputPanel(
+        title = "T-Test Controls", status = "danger",
+        selectInput("yeartt", "Year:", c(2006,2010,2014,2016),selected = 2010),
+        selectInput("yeartt2", "Year:", c(2006,2010,2014,2016), selected=2014), 
+        selectInput("chemicals3", "Chemicals:", chemicals)
+)
+
+renderUI({
+    y1 <- ru3%>%filter(Year == input$yeartt, chem == input$chemicals3)
+    y2 <- ru4%>%filter(Year == input$yeartt2, chem == input$chemicals3)
+    
+    #replace values with NA so they tables are same length
+    y1$Value[y1$Value == '(D)'] <- 0
+    y2$Value[y2$Value == '(D)'] <- 0
+
+    #conduct paired t test 
+    s1 <- paste0(t.test(as.numeric(y1$Value),as.numeric(y2$Value),paired=TRUE))
+    print(s1)
+    print(t.test(as.numeric(y1$Value),as.numeric(y2$Value),paired=TRUE))
+    HTML(paste0(
+                "<ul><li>T statistic: ",s1[1],"</li>",
+                "<li>95% confidence interval: ",s1[4],"</li>
+                <li>Degrees of freedom: ",s1[2],"</li>
+                <li>P-value: ",s1[3],"</li>
+                <li>Mean of differences: ",s1[5],"</li><ul>"
+                ))
+  })
+
+```
+
+
+

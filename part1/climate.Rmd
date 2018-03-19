@@ -1,0 +1,138 @@
+---
+title: "Bering Sea Climate Analysis"
+author: "Ben Gaudiosi and Kayla Ippongi"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(lubridate)
+library(zoo)
+
+NOAA <- read.csv("data.csv")
+yrs <- 1987:2016
+
+# Compute statistic tables
+median <- aggregate(na.omit(NOAA$ATMP), list(year(NOAA$date[complete.cases(NOAA$ATMP)])), median)$x
+median[length(median)+1] <- median(na.omit(NOAA$ATMP))
+mean <- aggregate(na.omit(NOAA$ATMP), list(year(NOAA$date[complete.cases(NOAA$ATMP)])), mean)$x
+mean[length(mean)+1] <- mean(na.omit(NOAA$ATMP))
+std <- aggregate(na.omit(NOAA$ATMP), list(year(NOAA$date[complete.cases(NOAA$ATMP)])), sd)$x
+std[length(std)+1] <- sd(na.omit(NOAA$ATMP))
+min <- aggregate(na.omit(NOAA$ATMP), list(year(NOAA$date[complete.cases(NOAA$ATMP)])), min)$x
+min[length(min)+1] <- min(na.omit(NOAA$ATMP))
+max <- aggregate(na.omit(NOAA$ATMP), list(year(NOAA$date[complete.cases(NOAA$ATMP)])), max)$x
+max[length(max)+1] <- max(na.omit(NOAA$ATMP))
+  
+air_stats <- data.frame(median, mean, std, min, max)
+row.names(air_stats) <- c(yrs, 'Total')
+  
+median <- aggregate(na.omit(NOAA$WTMP), list(year(NOAA$date[complete.cases(NOAA$WTMP)])), median)$x
+median[length(median)+1] <- median(na.omit(NOAA$WTMP))
+mean <- aggregate(na.omit(NOAA$WTMP), list(year(NOAA$date[complete.cases(NOAA$WTMP)])), mean)$x
+mean[length(mean)+1] <- mean(na.omit(NOAA$WTMP))
+std <- aggregate(na.omit(NOAA$WTMP), list(year(NOAA$date[complete.cases(NOAA$WTMP)])), sd)$x
+std[length(std)+1] <- sd(na.omit(NOAA$WTMP))
+min <- aggregate(na.omit(NOAA$WTMP), list(year(NOAA$date[complete.cases(NOAA$WTMP)])), min)$x
+min[length(min)+1] <- min(na.omit(NOAA$WTMP))
+max <- aggregate(na.omit(NOAA$WTMP), list(year(NOAA$date[complete.cases(NOAA$WTMP)])), max)$x
+max[length(max)+1] <- max(na.omit(NOAA$WTMP))
+  
+water_stats <- data.frame(median, mean, std, min, max)
+row.names(water_stats) <- c(yrs, 'Total')
+```
+
+## Overview
+
+We have collected Air and Water Temperature data from NOAA buoy 46305 located in the Bering Sea.  In the following slides, you'll see a summary of what we've collected and some analysis about the climate.
+For the years 2012 and 2013 data was collected from the nearby buoy 46070 as our original buoy did not have data for during this time period.
+
+## Air Temperature Statistics
+```{r}
+print(air_stats[1:15,])
+```
+
+## Air Temperature Statistics Cont.
+```{r}
+print(air_stats[16:30,])
+```
+
+## Air Temperature Time Series
+```{r}
+dataTimeSeries <- ts(na.approx(NOAA$ATMP), start = c(1987,1),frequency = 365.25)
+plot(dataTimeSeries, xlab = "Time", ylab="Air Temperature (Celsius)")
+```
+
+## Water Temperature Statistics
+```{r}
+print(water_stats[1:15,])
+```
+
+## Water Temperature Statistics Cont.
+```{r}
+print(water_stats[16:30,])
+```
+
+## Water Temperature Time Series
+```{r}
+dataTimeSeries <- ts(na.approx(NOAA$WTMP), start = c(1987,1), frequency=365.25)
+    plot.ts(dataTimeSeries, xlab = "Time", ylab="Water Temperature (Celsius)")
+```
+
+## Are Air and Water Temperature correlated?
+It would seem that there should be a relation between air temperature and sea temperature. 
+
+To confirm this, we must find the correlation coefficient between the two temperatures. The value is as follows:
+
+```{r}
+correlation <- cor(NOAA$ATMP, NOAA$WTMP, use = "pairwise.complete.obs")
+correlation
+```
+
+This implies that there is a strong positive correlation between the two,
+which is exactly what we'd expect.
+
+## Climate Change Analysis
+```{r}
+ttest_air <- t.test(NOAA$ATMP[year(NOAA$date) == 1988], NOAA$ATMP[year(NOAA$date) == 2016], paired=TRUE)
+
+ttest_water <- t.test(NOAA$WTMP[year(NOAA$date) == 1988], NOAA$WTMP[year(NOAA$date) == 2016], paired=TRUE)
+```
+Has the mean temperature of water and air in the Bering sea changed over the past 30 years?
+
+We performed two tailed t-tests on the data from 1988 and 2016 to help find the  answer to this question.
+
+The alternative hypothesis in this case is that  the true difference in means is not equal to 0. 
+
+## Air Temperature Change
+For air temperature, the t-value is:
+```{r}
+ttest_air$statistic
+```
+And the p-value is: 
+```{r}
+ttest_air$p.value
+```
+
+## Water Temperature Change
+For water temperature, the t-value is:
+```{r}
+ttest_water$statistic
+```
+And the p-value is 
+```{r}
+ttest_water$p.value
+```
+
+## Conclusions
+These values imply that it is extrremely likely that temperatures have changed over the past 30 years, confirming the results of most scientists.
+
+## Notes on Data Selection
+In our analysis, we use only one sample per day day out of 24 daily hourly temperature readings, specifically at noon.
+
+Though it's more computationally expensive to find the data, using the full range of data gives much more conclusive results when doing the t-test.
+
+For air temperature, we get the much more conclusive t-value of -40.728, nearly indisputable evidence.
+
+However, since our results were already fairly conclusive, this seems
+unnecessary. Thus we believe our results to still be worth consideration.
