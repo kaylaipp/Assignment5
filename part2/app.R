@@ -7,8 +7,9 @@ library(tidyverse)
 library(shinydashboard)
 library(DT)
 
-#didn't include paraquat & abamectin & DICHLOROPROPENE & EMAMECTIN-BENZOATE & FENPROPATHRIN bc values were dissolved (D)
-#OXYDEMETON-METHYL, DIMETHOATE, THIODICARB,'METHAMIDOPHOS','DIFLUBENZURON'
+#didn't include PARAQUAT & ABAMECATIN & DICHLOROPROPENE & EMAMECTIN-BENZOATE & FENPROPATHRIN 
+#OXYDEMETON-METHYL, DIMETHOATE, THIODICARB,'METHAMIDOPHOS','DIFLUBENZURON' b/c values were dissolved (D)
+#the following list is only chemicals that were not dissolved. 
 chemicals <- c('BETA-CYFLUTHRIN','BIFENTHRIN','CHLORANTRANILIPROLE','CHLORPYRIFOS','CYFLUTHRIN',
                'ESFENVALERATE','IMIDACLOPRID','LAMBDA-CYHALOTHRIN','METHOMYL','NALED',
                'PERMETHRIN','THIAMETHOXAM','ZETA-CYPERMETHRIN',
@@ -21,6 +22,7 @@ veggies <-c('BROCCOLI', 'CAULIFLOWER')
 #turn off warnings & scientific notation for now
 options(warn=-1)
 options(scipen = 999)
+options(shiny.sanitize.errors = FALSE)
 
 ui <- dashboardPage(
   dashboardHeader(title = "Dashboard"),
@@ -37,7 +39,7 @@ ui <- dashboardPage(
               
               box(
                 title = "Time Series Controls", status = "success",
-                sliderInput("years", "Years:",
+                sliderInput("years", "Years: (Note: error message means chemical was not applied in one of specified years)",
                             min = 2006, max = 2016, value = c(2006,2016),sep = ""),
                 
                 selectInput("chemical", "Chemical:",chemicals), 
@@ -133,7 +135,7 @@ server <- function(input, output) {
   #error handling 
   data <- reactive({
     validate(
-      need(try(output$ttest), "Please select a data set")
+      need((ru%>%filter(between(Year, input$years[1],input$years[2]), str_detect(quant, input$chemical), Commodity == input$veggies1)), "Please select a data set")
     )
     get(input$data, 'package:datasets')
   })
@@ -171,6 +173,7 @@ server <- function(input, output) {
     
   })
   
+  #Barplot 
   output$plot2 <- renderPlot({
     newru2 <- ru2%>%filter(Year == input$years2, Commodity == input$veggies2)
     #replace (D) with 0
@@ -197,32 +200,29 @@ server <- function(input, output) {
     toxicity
   })
   
+  
+  #T-test
   output$ttest = renderUI({
     y1 <- ru3%>%filter(Year == input$yeartt, chem == input$chemicals3)
     y2 <- ru4%>%filter(Year == input$yeartt2, chem == input$chemicals3)
-    View(y1)
-    View(y2)
     
     #replace values with NA so they tables are same length
     y1$Value[y1$Value == '(D)'] <- 0
     y2$Value[y2$Value == '(D)'] <- 0
     
-    View(y1)
-    #conduct paired t test 
     s1 <- paste0(t.test(as.numeric(y1$Value),as.numeric(y2$Value),paired=TRUE))
-    print(s1)
-    print(t.test(as.numeric(y1$Value),as.numeric(y2$Value),paired=TRUE))
-    HTML(paste0("Null Hypothesis: There is an increasing of variety and amount of chemicals applied to produce as years progress<br>", 
-                "Conclusion: There was a significant difference in the paired t statistic and mean when comparing earlier years with more 
-                recent years. The results suggest that the null hypothesis is true and there is a trend of greater variety of chemicals with 
+    HTML(paste0("<strong>Note:</strong> Error message means specificed chemical was not applied in one of the years selected <br>",
+                "Null Hypothesis: There is an increasing of variety and amount of chemicals applied to produce as years progress<br>",
+                "Conclusion: There was a significant difference in the paired t statistic and mean when comparing earlier years with more
+                recent years. The results suggest that the null hypothesis is true and there is a trend of greater variety of chemicals with
                 greater amounts. <br><br>",
-                
+
                 "<ul><li>T statistic: ",s1[1],"</li>",
                 "<li>95% confidence interval: ",s1[4],"</li>
                 <li>Degrees of freedom: ",s1[2],"</li>
                 <li>P-value: ",s1[3],"</li>
                 <li>Mean of differences: ",s1[5],"</li><ul>"
-                
+
     ))
   })
   

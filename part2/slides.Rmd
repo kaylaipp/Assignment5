@@ -28,7 +28,7 @@ variety of chemicals used in produce as the years go on as seen in the deviating
 ## Toxic Chemicals Found
 
 The following is a comprehensive list of toxic (festricted use chemicals) found within broccoli 
-and cauliflower across the US. 
+and cauliflower across the US that were not marked as dissolved. 
 
 ```{r}
 chemicals <- c('BETA-CYFLUTHRIN','BIFENTHRIN','CHLORANTRANILIPROLE','CHLORPYRIFOS','CYFLUTHRIN',
@@ -182,6 +182,7 @@ renderPlot({
 - Conclusion:There was a significant difference in the paired t statistic and mean when comparing earlier years with more 
 recent years. The results suggest that the null hypothesis is true and there is a trend of greater variety of chemicals with 
 greater amounts. 
+- Note: Error message simply means that the chemical was not applied during one of the specified years 
 
 ## T-Test
 ```{r}
